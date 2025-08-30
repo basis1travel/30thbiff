@@ -125,7 +125,13 @@ try:
 
     with tab1:
         st.header("📌 여행 개요")
-        overview_data = dict(zip(df_overview['key'], df_overview['value']))
+        
+        # Defensive coding: Check if required columns exist before processing
+        if 'key' in df_overview.columns and 'value' in df_overview.columns:
+            overview_data = dict(zip(df_overview['key'], df_overview['value']))
+        else:
+            overview_data = {} # Prevent error if sheet is empty
+
         title = st.text_input("여행 제목", value=overview_data.get("title", "제30회 부산국제영화제(BIFF) 커플 여행"))
         purpose = st.text_input("여행 목적", value=overview_data.get("purpose", "BIFF 영화 관람, 부산 관광 및 커플 여행"))
         col1, col2 = st.columns(2)
