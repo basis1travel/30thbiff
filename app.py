@@ -93,17 +93,12 @@ try:
     df_movies = load_data(ws_movies)
     df_events = load_data(ws_events)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["여행 개요", "📝 계획 버퍼", "🎬 영화 목록", "🗺️ 상세 일정", "✨ 이벤트/체험단"])
-
     with tab1:
         st.header("📌 여행 개요")
-        
-        # Defensive coding: Check if required columns exist before processing
         if 'key' in df_overview.columns and 'value' in df_overview.columns:
             overview_data = dict(zip(df_overview['key'], df_overview['value']))
         else:
-            overview_data = {} # Prevent error if sheet is empty
-
+            overview_data = {}
         title = st.text_input("여행 제목", value=overview_data.get("title", "제30회 부산국제영화제(BIFF) 커플 여행"))
         purpose = st.text_input("여행 목적", value=overview_data.get("purpose", "BIFF 영화 관람, 부산 관광 및 커플 여행"))
         col1, col2 = st.columns(2)
@@ -111,8 +106,13 @@ try:
             start_date = st.text_input("여행 시작일", value=overview_data.get("start_date", "2025-09-18"), disabled=True)
         with col2:
             end_date = st.text_input("여행 종료일", value=overview_data.get("end_date", "2025-09-23"), disabled=True)
-        new_overview_data = {"title": title, "purpose": purpose, "start_date": start_date, "end_date": end_date}
-        df_overview_new = pd.DataFrame(new_overview_data.items(), columns=['key', 'value'])
+        
+        if st.button("💾 여행 개요 저장하기", key="save_overview"):
+            new_overview_data = {"title": title, "purpose": purpose, "start_date": start_date, "end_date": end_date}
+            df_overview_new = pd.DataFrame(new_overview_data.items(), columns=['key', 'value'])
+            save_data(ws_overview, df_overview_new)
+            st.success("✅ 여행 개요가 저장되었습니다!")
+            st.experimental_rerun()
 
     with tab2:
         st.header("📝 계획 버퍼 (아이디어)")
@@ -121,7 +121,7 @@ try:
             st.markdown("""
             - **1티어**: 광안리, 센텀
             - **2티어**: 부산역, 서면, 해운대
-            - **3티어**: 남포동+자갈치, 미포, 청사포, 송정
+            - **3어**: 남포동+자갈치, 미포, 청사포, 송정
             - **4티어**: 송도, 기장 (부산 가깝거나, 역 근처 or 센텀가는 버스가 많은 곳)
             - **5티어**: 다대포, 영도(태종대), 금련산(범어사), 기장 (부산 멀고 접근성 떨어지는 곳)
             
@@ -133,9 +133,18 @@ try:
         st.divider()
         st.subheader("🏨 숙소 예비 후보")
         df_acc_new = st.data_editor(df_acc, num_rows="dynamic", use_container_width=True, key="acc_editor")
+        if st.button("💾 숙소 후보 저장하기", key="save_acc"):
+            save_data(ws_acc, df_acc_new)
+            st.success("✅ 숙소 예비 후보 목록이 저장되었습니다!")
+            st.experimental_rerun()
+
         st.divider()
         st.subheader("📋 하고 싶은 것들 (엑티비티)")
         df_act_new = st.data_editor(df_act, num_rows="dynamic", use_container_width=True, key="act_editor")
+        if st.button("💾 하고 싶은 것들 저장하기", key="save_act"):
+            save_data(ws_act, df_act_new)
+            st.success("✅ 하고 싶은 것들 목록이 저장되었습니다!")
+            st.experimental_rerun()
 
     with tab3:
         st.header("🎬 관람 희망 영화 리스트")
@@ -143,6 +152,10 @@ try:
             df_movies, num_rows="dynamic", use_container_width=True, key="movies_editor",
             column_config={"예매 여부": st.column_config.CheckboxColumn("예매 여부", default=False)}
         )
+        if st.button("💾 영화 목록 저장하기", key="save_movies"):
+            save_data(ws_movies, df_movies_new)
+            st.success("✅ 영화 목록이 저장되었습니다!")
+            st.experimental_rerun()
 
     with tab4:
         st.header("🗺️ 일자별 상세 계획")
@@ -157,19 +170,10 @@ try:
                 "신청 방법": st.column_config.LinkColumn("신청 방법 (URL)")
             }
         )
-
-    st.sidebar.header("저장하기")
-    if st.sidebar.button("💾 변경사항 Google Sheets에 저장하기"):
-        try:
-            save_data(ws_overview, df_overview_new)
-            save_data(ws_acc, df_acc_new)
-            save_data(ws_act, df_act_new)
-            save_data(ws_movies, df_movies_new)
+        if st.button("💾 이벤트 정보 저장하기", key="save_events"):
             save_data(ws_events, df_events_new)
-            st.sidebar.success("✅ 모든 변경사항이 Google Sheets에 저장되었습니다!")
+            st.success("✅ 이벤트 정보가 저장되었습니다!")
             st.experimental_rerun()
-        except Exception as e:
-            st.sidebar.error(f"저장 중 오류 발생: {e}")
 
 except Exception as e:
     st.error(f"앱 로딩 중 오류가 발생했습니다. Google Sheets API 설정 및 Secrets 구성을 확인하세요.")
