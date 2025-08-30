@@ -79,7 +79,13 @@ try:
     acc_headers = ["숙소명", "위치", "예상 비용", "장점", "예약링크", "상태"]
     act_headers = ["활동명", "장소", "예상 비용", "소요시간", "메모"]
     movies_headers = ["영화 제목", "감독", "상영 일시", "상영관", "예매 여부"]
-    events_headers = ["플랫폼", "업체/내용", "신청 기간", "결과 발표일", "리뷰 마감일", "상태", "신청 방법"]
+    events_headers = [
+        "No.", "상호", "예약계획", "방문일자", "방문요일", "예약시간", "방문시간", 
+        "Schedule", "플랫폼", "종류", "술", "콜/프", "포스팅마감일자", "웹페이지", 
+        "지원내역", "예약가능일시", "방문전특이사항", "월", "화", "수", "목", "금", 
+        "토", "일", "주소", "위치설명", "권역", "세부권역", "주문메뉴", "지원비용", 
+        "추가비용", "방문후특이사항", "뿡이별점", "뿡이코멘트", "쁜찬별점", "쁜찬코멘트"
+    ]
     
     ws_overview = create_sheet_if_not_exists(spreadsheet, "overview", overview_headers)
     ws_acc = create_sheet_if_not_exists(spreadsheet, "accommodation_candidates", acc_headers)
@@ -93,7 +99,7 @@ try:
     df_movies = load_data(ws_movies)
     df_events = load_data(ws_events)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["여행 개요", "📝 계획 버퍼", "🎬 영화 목록", "🗺️ 상세 일정", "✨ 이벤트/체험단"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["여행 개요", "📝 계획 버퍼", "🎬 영화 목록", "🗺️ 상세 일정", "✨ 체험단"])
 
     with tab1:
         st.header("📌 여행 개요")
@@ -164,17 +170,16 @@ try:
         st.info("상세 일정은 Google Sheets에서 직접 편집하는 것이 더 편리할 수 있습니다.")
 
     with tab5:
-        st.header("✨ 체험단 및 이벤트 신청 정보")
+        st.header("✨ 체험단 정보")
         df_events_new = st.data_editor(
             df_events, num_rows="dynamic", use_container_width=True, key="events_editor",
             column_config={
-                "상태": st.column_config.SelectboxColumn("상태", options=["준비", "신청 완료", "선정", "탈락"], required=True),
-                "신청 방법": st.column_config.LinkColumn("신청 방법 (URL)")
+                "웹페이지": st.column_config.LinkColumn("웹페이지")
             }
         )
-        if st.button("💾 이벤트 정보 저장하기", key="save_events"):
+        if st.button("💾 체험단 정보 저장하기", key="save_events"):
             save_data(ws_events, df_events_new)
-            st.success("✅ 이벤트 정보가 저장되었습니다!")
+            st.success("✅ 체험단 정보가 저장되었습니다!")
             st.experimental_rerun()
 
 except Exception as e:
