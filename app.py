@@ -5,6 +5,7 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from geopy.geocoders import Nominatim
 import time
+import pydeck as pdk
 
 # --- Password Protection ---
 def check_password():
@@ -250,6 +251,127 @@ try:
             time_data['차이(분)'] = (time_data['방문시간_dt'] - time_data['예약시간_dt']).dt.total_seconds() / 60
             avg_diff = time_data['차이(분)'].mean()
             st.metric("평균 도착 시간", f"{'예약보다 ' + str(int(abs(avg_diff))) + '분 일찍' if avg_diff < 0 else '예약보다 ' + str(int(avg_diff)) + '분 늦게'}")
+
+
+
+        # --- 데이터 전처리 ---
+        data24 = df_2024[df_2024['상호'].notna() & (df_2024['상호'] != '') & (~df_2024['상호'].str.contains("Day", na=False))].copy()
+        for col in ['지원비용', '추가비용']:
+            data24[col] = pd.to_numeric(data24[col], errors='coerce').fillna(0)
+        data24['총비용'] = data24['지원비용'] + data24['추가비용']
+        data24['방문일자'] = pd.to_datetime(data24['방문일자'], errors='coerce')
+        data24['방문시간_dt'] = pd.to_datetime(data24['방문시간'], format='%H:%M', errors='coerce')
+        data24.sort_values(by=['방문일자', '방문시간_dt'], inplace=True)
+        data24.dropna(subset=['방문일자'], inplace=True)
+
+        # --- 날짜 선택기 ---
+        unique_dates = sorted(data24['방문일자'].dt.date.unique())
+        selected_date_str = st.selectbox("분석할 날짜를 선택하세요:", [d.strftime('%Y-%m-%d') for d in unique_dates])
+        selected_date = pd.to_datetime(selected_date_str).date()
+
+        day_df = data24[data24['방문일자'].dt.date == selected_date].copy()
+        day_df.reset_index(drop=True, inplace=True)
+
+        # --- 좌표 계산 ---
+        if 'lat' not in day_df.columns or 'lon' not in day_df.columns:
+            day_df['lat'], day_df['lon'] = None, None
+        
+        rows_to_geocode = day_df[pd.to_numeric(day_df['lat'], errors='coerce').isna()]
+        if not rows_to_geocode.empty:
+            with st.spinner(f"{len(rows_to_geocode)}개 장소의 좌표 계산 중..."):
+                for index, row in rows_to_geocode.iterrows():
+                    lat, lon = geocode_address(row.get('주소'), row.get('상호'))
+                    day_df.loc[index, 'lat'] = lat
+                    day_df.loc[index, 'lon'] = lon
+        
+        day_df['lat'] = pd.to_numeric(day_df['lat'], errors='coerce')
+        day_df['lon'] = pd.to_numeric(day_df['lon'], errors='coerce')
+        map_data = day_df.dropna(subset=['lat', 'lon']).copy()
+        map_data.reset_index(drop=True, inplace=True)
+
+        if map_data.empty:
+            st.warning("선택한 날짜에 지도에 표시할 장소가 없습니다.")
+            return
+
+        
+
+            # --- Pydeck 시각화 ---
+        st.subheader(f"🗺️ {selected_date_str} 이동 경로")
+
+        # 1. 경로 선 레이어 (시간에 따른 색상 변화)
+        path_data = []
+        for i in range(len(map_data) - 1):
+            path_data.append({
+                "start": [map_data.loc[i, 'lon'], map_data.loc[i, 'lat']],
+                "end": [map_data.loc[i + 1, 'lon'], map_data.loc[i + 1, 'lat']],
+                "color": [255, 0, 0, 255 - (i * (200 / len(map_data)))], # 점점 옅어지는 붉은색
+                "tooltip": f"{i+1}. {map_data.loc[i, '상호']} -> {i+2}. {map_data.loc[i+1, '상호']}"
+            })
+        
+        path_layer = pdk.Layer(
+            "LineLayer",
+            data=path_data,
+            get_source_position="start",
+            get_target_position="end",
+            get_color="color",
+            get_width=5,
+            highlight_color=[255, 255, 0],
+            picking_radius=10,
+            auto_highlight=True,
+        )
+
+        # 2. 비용 기반 원 레이어
+        scatter_layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=map_data,
+            get_position=["lon", "lat"],
+            get_radius="총비용 * 0.2 + 50", # 비용에 따라 원 크기 조절
+            get_fill_color=[30, 144, 255, 180], # 파란색 원
+            pickable=True,
+        )
+
+        # 3. 순서 아이콘 레이어
+        icon_data = []
+        for i, row in map_data.iterrows():
+            icon_data.append({
+                "coordinates": [row['lon'], row['lat']],
+                "text": str(i + 1),
+                "tooltip": f"**{i+1}. {row['상호']}**\n- 종류: {row['종류']}\n- 총비용: {int(row['총비용']):,}원"
+            })
+
+        icon_layer = pdk.Layer(
+            "TextLayer",
+            data=icon_data,
+            get_position="coordinates",
+            get_text="text",
+            get_size=20,
+            get_color=[255, 255, 255],
+            get_angle=0,
+            get_text_anchor="'middle'",
+            get_alignment_baseline="'center'",
+        )
+
+        # 지도 초기 시점 설정
+        view_state = pdk.ViewState(
+            latitude=map_data["lat"].mean(),
+            longitude=map_data["lon"].mean(),
+            zoom=12,
+            pitch=45,
+        )
+
+        # 덱 렌더링
+        r = pdk.Deck(
+            layers=[scatter_layer, path_layer, icon_layer],
+            initial_view_state=view_state,
+            map_style="mapbox://styles/mapbox/light-v10",
+            tooltip={"html": "{tooltip}", "style": {"color": "white"}},
+        )
+        st.pydeck_chart(r)
+
+        # --- 경로 정보 요약 ---
+        st.subheader("📝 경로 정보")
+        for i, row in map_data.iterrows():
+            st.markdown(f"**{i+1}. {row['상호']}** ({row['방문시간']}) - {int(row['총비용']):,}원")
 
     with tab5:
         st.header("🗓️ 상세 일정")
