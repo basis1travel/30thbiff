@@ -205,6 +205,8 @@ try:
             if not map_data.empty and '주소' in map_data.columns:
                 # Create a perfectly clean, single-column DataFrame for st.map
                 address_df = map_data[['주소']].reset_index(drop=True)
+                # Hypothesis: The column name might need to be in English for geocoding.
+                address_df.rename(columns={'주소': 'address'}, inplace=True)
                 st.map(address_df, zoom=11)
             else:
                 st.info("지도에 표시할 주소 데이터가 없습니다.")
