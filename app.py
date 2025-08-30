@@ -194,12 +194,16 @@ try:
             st.divider()
 
             # --- 2. Interactive Map ---
-            # --- 2. Interactive Map ---
             st.subheader("🗺️ 인터랙티브 방문 지도")
-            # For st.map to geocode addresses, the DataFrame should contain only the address column.
-            map_data = df_2024_filtered[df_2024_filtered['주소'].notna() & (df_2024_filtered['주소'] != '')][['주소']].copy()
-            if not map_data.empty:
-                st.map(map_data, zoom=11)
+            map_data = df_2024_filtered[df_2024_filtered['주소'].notna() & (df_2024_filtered['주소'] != '')].copy()
+            
+            # Create a new DataFrame with renamed columns to be explicit for st.map
+            if not map_data.empty and '주소' in map_data.columns:
+                map_df = pd.DataFrame()
+                map_df['lat'] = None # Let st.map geocode by providing address in the right column
+                map_df['lon'] = None
+                map_df['주소'] = map_data['주소']
+                st.map(map_df, latitude='lat', longitude='lon', zoom=11)
             else:
                 st.info("지도에 표시할 주소 데이터가 없습니다.")
 
