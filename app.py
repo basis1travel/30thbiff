@@ -242,66 +242,6 @@ try:
             st.success("✅ 체험단 정보가 저장되었습니다!")
             st.experimental_rerun()
 
-    with tab2:
-        st.header("📝 계획 버퍼 (아이디어)")
-        with st.expander("💡 여행 가이드라인 보기", expanded=True):
-            st.subheader("📍 부산 지역별 중요도 (Tier List)")
-            st.markdown("""
-            - **1티어**: 광안리, 센텀
-            - **2티어**: 부산역, 서면, 해운대
-            - **3어**: 남포동+자갈치, 미포, 청사포, 송정
-            - **4티어**: 송도, 기장 (부산 가깝거나, 역 근처 or 센텀가는 버스가 많은 곳)
-            - **5티어**: 다대포, 영도(태종대), 금련산(범어사), 기장 (부산 멀고 접근성 떨어지는 곳)
-            
-            *5티어로 갈수록 영화제와 함께 즐기려면 시간과 체력을 더 많이 써야 합니다.*
-            """)
-            st.subheader("🍽️ 맛집/명소 탐방 가이드")
-            st.markdown("부산 지역 명물 맛집, 시장 로컬 맛집, 명소/구경거리 등을 아래 '하고 싶은 것들'에 후보로 추가하여 계획해보세요.")
-        
-        st.divider()
-        st.subheader("🏨 숙소 예비 후보")
-        df_acc_new = st.data_editor(df_acc, num_rows="dynamic", use_container_width=True, key="acc_editor")
-        if st.button("💾 숙소 후보 저장하기", key="save_acc"):
-            save_data(ws_acc, df_acc_new)
-            st.success("✅ 숙소 예비 후보 목록이 저장되었습니다!")
-            st.experimental_rerun()
-
-        st.divider()
-        st.subheader("📋 하고 싶은 것들 (엑티비티)")
-        df_act_new = st.data_editor(df_act, num_rows="dynamic", use_container_width=True, key="act_editor")
-        if st.button("💾 하고 싶은 것들 저장하기", key="save_act"):
-            save_data(ws_act, df_act_new)
-            st.success("✅ 하고 싶은 것들 목록이 저장되었습니다!")
-            st.experimental_rerun()
-
-    with tab3:
-        st.header("🎬 관람 희망 영화 리스트")
-        df_movies_new = st.data_editor(
-            df_movies, num_rows="dynamic", use_container_width=True, key="movies_editor",
-            column_config={"예매 여부": st.column_config.CheckboxColumn("예매 여부", default=False)}
-        )
-        if st.button("💾 영화 목록 저장하기", key="save_movies"):
-            save_data(ws_movies, df_movies_new)
-            st.success("✅ 영화 목록이 저장되었습니다!")
-            st.experimental_rerun()
-
-    with tab4:
-        st.header("🗺️ 일자별 상세 계획")
-        st.info("상세 일정은 Google Sheets에서 직접 편집하는 것이 더 편리할 수 있습니다.")
-
-    with tab5:
-        st.header("✨ 체험단 정보")
-        df_events_new = st.data_editor(
-            df_events, num_rows="dynamic", use_container_width=True, key="events_editor",
-            column_config={
-                "웹페이지": st.column_config.LinkColumn("웹페이지")
-            }
-        )
-        if st.button("💾 체험단 정보 저장하기", key="save_events"):
-            save_data(ws_events, df_events_new)
-            st.success("✅ 체험단 정보가 저장되었습니다!")
-            st.experimental_rerun()
-
 except Exception as e:
     st.error(f"앱 로딩 중 오류가 발생했습니다. Google Sheets API 설정 및 Secrets 구성을 확인하세요.")
     st.error(f"오류 상세 내용: {e}")
