@@ -142,6 +142,7 @@ cython_debug/
 .streamlit/
 
 # Sensitive credential files
+*.json
 secrets_to_upload.txt
 pre_plan.txt
-*.json
+
