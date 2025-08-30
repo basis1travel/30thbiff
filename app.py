@@ -195,15 +195,12 @@ try:
 
             # --- 2. Interactive Map ---
             st.subheader("🗺️ 인터랙티브 방문 지도")
-            map_data = df_2024_filtered[df_2024_filtered['주소'].notna() & (df_2024_filtered['주소'] != '')].copy()
+            map_data = df_2024_filtered[df_2024_filtered['주소'].notna() & (df_2024_filtered['주소'] != '')]
             
-            # Create a new DataFrame with renamed columns to be explicit for st.map
             if not map_data.empty and '주소' in map_data.columns:
-                map_df = pd.DataFrame()
-                map_df['lat'] = None # Let st.map geocode by providing address in the right column
-                map_df['lon'] = None
-                map_df['주소'] = map_data['주소']
-                st.map(map_df, latitude='lat', longitude='lon', zoom=11)
+                # Create a perfectly clean, single-column DataFrame for st.map
+                address_df = map_data[['주소']].reset_index(drop=True)
+                st.map(address_df, zoom=11)
             else:
                 st.info("지도에 표시할 주소 데이터가 없습니다.")
 
