@@ -66,39 +66,7 @@ st.set_page_config(page_title="부산 커플 여행 플래너", layout="wide")
 if not check_password():
     st.stop()
 
-# --- Secrets Debugging ---
-st.subheader("⚙️ Secrets 디버깅 정보")
-secrets_ok = True
-if "google_credentials" not in st.secrets:
-    st.error("❌ Secrets에 `[google_credentials]` 섹션이 없습니다.")
-    secrets_ok = False
-else:
-    st.success("✅ Secrets에 `[google_credentials]` 섹션이 있습니다.")
-    
-    if "spreadsheet_key" not in st.secrets["google_credentials"]:
-        st.error("❌ `[google_credentials]` 안에 `spreadsheet_key` 항목이 없습니다.")
-        secrets_ok = False
-    else:
-        st.success("✅ `[google_credentials]` 안에 `spreadsheet_key` 항목이 있습니다.")
 
-    if "gcp" not in st.secrets["google_credentials"]:
-        st.error("❌ `[google_credentials]` 안에 `[google_credentials.gcp]` 하위 섹션이 없습니다.")
-        secrets_ok = False
-    else:
-        st.success("✅ `[google_credentials]` 안에 `[google_credentials.gcp]` 하위 섹션이 있습니다.")
-        gcp_keys = st.secrets["google_credentials"]["gcp"].keys()
-        expected_keys = ["type", "project_id", "private_key_id", "private_key", "client_email", "client_id"]
-        missing_keys = [key for key in expected_keys if key not in gcp_keys]
-        if missing_keys:
-            st.error(f"❌ `[gcp]` 섹션에 다음 항목들이 누락되었습니다: {', '.join(missing_keys)}")
-            secrets_ok = False
-        else:
-            st.success("✅ `[gcp]` 섹션에 필요한 모든 항목이 존재합니다.")
-
-if not secrets_ok:
-    st.warning("위의 디버깅 정보를 확인하여 Streamlit Secrets 설정을 수정해주세요.")
-    st.stop()
-# --- End of Debugging ---
 
 
 st.title("💘 30회 BIFF 4박 5일 커플 여행 플래너 (Google Sheets 연동)")
