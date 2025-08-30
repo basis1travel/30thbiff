@@ -290,10 +290,7 @@ try:
         map_data.reset_index(drop=True, inplace=True)
 
         if map_data.empty:
-            st.warning("선택한 날짜에 지도에 표시할 장소가 없습니다.")
-            return
-
-        
+            st.warning("선택한 날짜에 지도에 표시할 장소가 없습니다.")        
 
             # --- Pydeck 시각화 ---
         st.subheader(f"🗺️ {selected_date_str} 이동 경로")
