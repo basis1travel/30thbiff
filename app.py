@@ -195,7 +195,12 @@ try:
 
             # --- 2. Interactive Map ---
             st.subheader("🗺️ 인터랙티브 방문 지도")
-            map_data = df_2024_filtered[df_2024_filtered['주소'].notna() & (df_2024_filtered['주소'] != '')]
+            
+            # More robust filtering based on user's insight
+            # 1. Filter out header-like rows (e.g., '부산 Day 1')
+            data_rows = df_2024_filtered[~df_2024_filtered['상호'].str.contains("Day", na=False)]
+            # 2. Filter for rows that have a valid, non-empty address
+            map_data = data_rows[data_rows['주소'].notna() & (data_rows['주소'].str.strip() != '')]
             
             if not map_data.empty and '주소' in map_data.columns:
                 # Create a perfectly clean, single-column DataFrame for st.map
