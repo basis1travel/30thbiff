@@ -93,6 +93,8 @@ try:
     df_movies = load_data(ws_movies)
     df_events = load_data(ws_events)
 
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["여행 개요", "📝 계획 버퍼", "🎬 영화 목록", "🗺️ 상세 일정", "✨ 이벤트/체험단"])
+
     with tab1:
         st.header("📌 여행 개요")
         if 'key' in df_overview.columns and 'value' in df_overview.columns:
