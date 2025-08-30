@@ -48,8 +48,12 @@ def create_sheet_if_not_exists(spreadsheet, sheet_name, headers):
     return worksheet
 
 def load_data(worksheet):
-    df = get_as_dataframe(worksheet, usecols=None, header=0).astype(str)
-    df = df.fillna("")
+    # Read data, interpreting all columns as strings initially
+    df = get_as_dataframe(worksheet, usecols=None, header=0, dtype=str)
+    # Replace any lingering pandas/numpy specific null values with empty strings
+    df.replace({pd.NA: "", float('nan'): "", 'nan': ''}, inplace=True)
+    # Ensure all data is string type and fill any remaining nulls
+    df = df.astype(str).fillna("")
     return df
 
 def save_data(worksheet, df):
