@@ -197,58 +197,59 @@ try:
             st.experimental_rerun()
 
     with tab4:
-        st.header("🗺️ 작년 여행 돌아보기 (2024)")
+        st.header("📊 2024년 여행 회고 및 분석")
         if df_2024.empty or '상호' not in df_2024.columns:
             st.warning("작년 여행 데이터가 'biff_2024' 시트에 없거나 형식이 맞지 않습니다.")
-        else:
-            df_2024_filtered = df_2024[df_2024['상호'].notna() & (df_2024['상호'] != '') & (~df_2024['상호'].str.contains("Day", na=False))].copy()
-            df_2024_filtered['지원비용'] = pd.to_numeric(df_2024_filtered['지원비용'], errors='coerce').fillna(0)
-            df_2024_filtered['추가비용'] = pd.to_numeric(df_2024_filtered['추가비용'], errors='coerce').fillna(0)
-            df_2024_filtered['총비용'] = df_2024_filtered['지원비용'] + df_2024_filtered['추가비용']
-            
-            st.subheader("👑 작년 여행 하이라이트")
-            total_places = len(df_2024_filtered)
-            total_spent = df_2024_filtered['총비용'].sum()
-            col1, col2 = st.columns(2)
-            col1.metric("총 방문 장소", f"{total_places} 곳")
-            col2.metric("총 지출 (추정)", f"{int(total_spent):,} 원")
-            st.divider()
 
-            st.subheader("🗺️ 인터랙티브 방문 지도")
-            map_data = df_2024_filtered.copy()
-            
-            # Check for rows where lat/lon are missing
-            rows_to_geocode = map_data[pd.to_numeric(map_data.get('lat', pd.NA), errors='coerce').isna()]
-            
-            if not rows_to_geocode.empty:
-                with st.spinner(f"{len(rows_to_geocode)}개의 새로운 장소 좌표를 계산하는 중..."):
-                    for index, row in rows_to_geocode.iterrows():
-                        lat, lon = geocode_address(row.get('주소'), row.get('상호'))
-                        map_data.loc[index, 'lat'] = lat
-                        map_data.loc[index, 'lon'] = lon
-            
-            # Convert lat/lon to numeric for mapping
-            map_data['lat'] = pd.to_numeric(map_data['lat'], errors='coerce')
-            map_data['lon'] = pd.to_numeric(map_data['lon'], errors='coerce')
+        # --- 데이터 전처리 ---
+        data24 = df_2024[df_2024['상호'].notna() & (df_2024['상호'] != '') & (~df_2024['상호'].str.contains("Day", na=False))].copy()
+        for col in ['지원비용', '추가비용']:
+            data24[col] = pd.to_numeric(data24[col], errors='coerce').fillna(0)
+        data24['총비용'] = data24['지원비용'] + data24['추가비용']
+        
+        # --- 1. 핵심 지표 (Key Metrics) ---
+        st.subheader("👑 한눈에 보는 작년 여행")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("총 지출액", f"{int(data24['총비용'].sum()):,} 원")
+        col2.metric("실제 지출액 (내돈내산)", f"{int(data24['추가비용'].sum()):,} 원")
+        col3.metric("체험단 지원 가치", f"{int(data24['지원비용'].sum()):,} 원")
 
-            if not map_data.dropna(subset=['lat', 'lon']).empty:
-                st.map(map_data.dropna(subset=['lat', 'lon']), zoom=11)
-            else:
-                st.info("지도에 표시할 주소 데이터가 없습니다.")
-            st.divider()
+        # --- 2. 지출 분석 ---
+        st.subheader("💸 지출 분석")
+        food_cats = ['돼지', '스시/회', '디저트', '소', '카페', '복어', '와인바', '샐러드/포케', '이자카야']
+        data24['카테고리'] = data24['종류'].apply(lambda x: '식음료' if x in food_cats else ('교통' if x == '이동수단' else ('문화/예술' if x == '문화예술' else ('숙소' if x == '숙소' else '기타'))))
+        spending_by_cat = data24.groupby('카테고리')['총비용'].sum().sort_values(ascending=False)
+        st.bar_chart(spending_by_cat)
 
-            st.subheader("🗓️ 일자별 타임라인")
-            df_2024_filtered['방문일자'] = pd.to_datetime(df_2024_filtered['방문일자'], errors='coerce')
-            valid_dates_df = df_2024_filtered.dropna(subset=['방문일자'])
-            for date in sorted(valid_dates_df['방문일자'].dt.date.unique()):
-                with st.expander(f"**{date.strftime('%Y년 %m월 %d일')}**"):
-                    day_df = valid_dates_df[valid_dates_df['방문일자'].dt.date == date]
-                    for _, row in day_df.iterrows():
-                        st.markdown(f"- **{row.get('방문시간', '')} - {row.get('상호', '')}** ({row.get('종류', '')})")
-                        if row.get('주문메뉴', ''):
-                            st.markdown(f"  - *주문:* {row.get('주문메뉴')}")
-                        if row.get('총비용', 0) > 0:
-                            st.markdown(f"  - *비용:* {int(row.get('총비용')):,} 원")
+        # --- 3. 동선 및 지역 분석 ---
+        st.subheader("🗺️ 동선 및 지역 분석")
+        map_data = data24.copy()
+        if 'lat' not in map_data.columns or 'lon' not in map_data.columns:
+            map_data['lat'], map_data['lon'] = None, None
+        
+        rows_to_geocode = map_data[pd.to_numeric(map_data['lat'], errors='coerce').isna()]
+        if not rows_to_geocode.empty:
+            with st.spinner(f"{len(rows_to_geocode)}개 장소의 좌표 계산 중..."):
+                for index, row in rows_to_geocode.iterrows():
+                    lat, lon = geocode_address(row.get('주소'), row.get('상호'))
+                    map_data.loc[index, 'lat'] = lat
+                    map_data.loc[index, 'lon'] = lon
+        
+        map_data['lat'] = pd.to_numeric(map_data['lat'], errors='coerce')
+        map_data['lon'] = pd.to_numeric(map_data['lon'], errors='coerce')
+        st.map(map_data.dropna(subset=['lat', 'lon']), zoom=11)
+
+        # --- 4. 시간 관리 분석 ---
+        st.subheader("⏰ 시간 관리 분석")
+        time_data = data24[['예약시간', '방문시간']].copy()
+        time_data = time_data[time_data['예약시간'].str.strip().ne('') & time_data['방문시간'].str.strip().ne('')]
+        if not time_data.empty:
+            time_data['예약시간_dt'] = pd.to_datetime(time_data['예약시간'], format='%H:%M', errors='coerce')
+            time_data['방문시간_dt'] = pd.to_datetime(time_data['방문시간'], format='%H:%M', errors='coerce')
+            time_data.dropna(inplace=True)
+            time_data['차이(분)'] = (time_data['방문시간_dt'] - time_data['예약시간_dt']).dt.total_seconds() / 60
+            avg_diff = time_data['차이(분)'].mean()
+            st.metric("평균 도착 시간", f"{'예약보다 ' + str(int(abs(avg_diff))) + '분 일찍' if avg_diff < 0 else '예약보다 ' + str(int(avg_diff)) + '분 늦게'}")
 
     with tab5:
         st.header("🗓️ 상세 일정")
