@@ -141,6 +141,7 @@ cython_debug/
 # Streamlit
 .streamlit/
 
-# Trip Plan JSON file
-trip_plan.json
+# Sensitive credential files
+secrets_to_upload.txt
 pre_plan.txt
+*.json
