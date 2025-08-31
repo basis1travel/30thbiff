@@ -187,12 +187,12 @@ try:
     ws_2024 = create_sheet_if_not_exists(spreadsheet, "biff_2024", [])
 
     # Load data
-    df_overview = load_data(ws_overview, "overview")
-    df_acc = load_data(ws_acc, "accommodation_candidates")
-    df_act = load_data(ws_act, "activity_candidates")
-    df_movies = load_data(ws_movies, "movies")
-    df_events = load_data(ws_events, "events")
-    df_2024 = load_data(ws_2024, "biff_2024")
+    df_overview = load_data(spreadsheet, "overview")
+    df_acc = load_data(spreadsheet, "accommodation_candidates")
+    df_act = load_data(spreadsheet, "activity_candidates")
+    df_movies = load_data(spreadsheet, "movies")
+    df_events = load_data(spreadsheet, "events")
+    df_2024 = load_data(spreadsheet, "biff_2024")
 
     # --- UI Tabs ---
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["여행 개요", "📝 계획 버퍼", "🎬 영화 목록", "🗺️ 작년 여행 돌아보기", "🗓️ 상세 일정", "✨ 체험단"])
