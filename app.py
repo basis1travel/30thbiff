@@ -55,13 +55,16 @@ def create_sheet_if_not_exists(spreadsheet, sheet_name, headers):
             worksheet.append_row(headers)
     return worksheet
 
-def load_data(worksheet):
-    df = get_as_dataframe(worksheet, usecols=None, header=0, dtype=str).fillna("")
-    return df
+@st.cache_data(ttl=600) # Cache data for 10 minutes
+def load_data(_worksheet):
+    return get_as_dataframe(_worksheet, usecols=None, header=0, dtype=str).fillna("")
 
 def save_data(worksheet, df):
     worksheet.clear()
     set_with_dataframe(worksheet, df, include_index=False, resize=True)
+    # Clear relevant caches after saving data
+    st.cache_data.clear()
+
 
 # --- Geocoding Function ---
 @st.cache_data
