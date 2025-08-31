@@ -6,6 +6,9 @@ import pandas as pd
 from geopy.geocoders import Nominatim
 import time
 import pydeck as pdk
+import re
+import requests
+from bs4 import BeautifulSoup
 
 # --- Password Protection ---
 def check_password():
@@ -95,6 +98,59 @@ def geocode_address(address, name):
             
     return None, None
 
+
+# --- BIFF Movie Crawling Function ---
+@st.cache_data
+def fetch_movie_info(url):
+    # ... (crawl_biff.py의 함수를 그대로 가져옴)
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers)
+        response.encoding = 'utf-8'
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        title_tag = soup.select_one(".film_info_title .tit_h1")
+        if title_tag and title_tag.find('small'):
+            title_tag.find('small').decompose()
+        title_kor = title_tag.text.strip() if title_tag else ""
+
+        base_info = {
+            "한국어 제목": title_kor,
+            "영어 제목": soup.select_one(".film_info_title .film_tit_en").text.strip() if soup.select_one(".film_info_title .film_tit_en") else "",
+            "감독": soup.select_one(".film_director .dir_name").text.strip() if soup.select_one(".film_director .dir_name") else "",
+            "Program Note": soup.select_one(".film_synopsis .desc").text.strip() if soup.select_one(".film_synopsis .desc") else ""
+        }
+        
+        spec_list = soup.select(".film_info.film_tit ul > li")
+        base_info["국가"] = spec_list[0].text.replace("국가", "").strip() if len(spec_list) > 0 else ""
+        base_info["제작 연도"] = spec_list[1].text.replace("제작연도", "").strip() if len(spec_list) > 1 else ""
+        base_info["러닝타임"] = spec_list[2].text.replace("러닝타임", "").strip() if len(spec_list) > 2 else ""
+        base_info["상영포맷"] = spec_list[3].text.replace("상영포맷", "").strip() if len(spec_list) > 3 else ""
+        base_info["컬러"] = spec_list[4].text.replace("컬러", "").strip() if len(spec_list) > 4 else ""
+        
+        hashtags = [tag.text.strip() for tag in soup.select(".film_tit .keywords")]
+        for i in range(3):
+            base_info[f"해시태그{i+1}"] = hashtags[i] if i < len(hashtags) else ""
+
+        final_data_list = []
+        schedule_tags = soup.select(".pgv_schedule .pgv_sch_list")
+        for schedule in schedule_tags:
+            schedule_info = base_info.copy()
+            schedule_info.update({
+                "예매코드": re.sub(r'\D', '', schedule.select_one(".code").text),
+                "날짜": schedule.select_one(".date").text.replace("날짜", "").strip(),
+                "시간": schedule.select_one(".time").text.replace("시간", "").strip(),
+                "상영관": schedule.select_one(".theater").text.replace("상영관", "").strip(),
+                "기타": " ".join([tag.text.strip() for tag in schedule.select(".sch_grade > span") if tag.text.strip()]),
+                "영화페이지": url
+            })
+            final_data_list.append(schedule_info)
+        
+        return final_data_list if final_data_list else [base_info]
+    except Exception:
+        return None
+
 # --- Streamlit UI ---
 st.set_page_config(page_title="부산 커플 여행 플래너", layout="wide")
 
@@ -111,7 +167,7 @@ try:
     overview_headers = ["key", "value"]
     acc_headers = ["숙소명", "위치", "예상 비용", "장점", "예약링크", "상태"]
     act_headers = ["활동명", "장소", "예상 비용", "소요시간", "메모"]
-    movies_headers = ["영화 제목", "감독", "상영 일시", "상영관", "예매 여부"]
+    movies_headers = ["한국어 제목", "영어 제목", "감독", "국가", "제작 연도", "러닝타임", "상영포맷", "컬러", "해시태그1", "해시태그2", "해시태그3", "예매코드", "날짜", "시간", "상영관", "기타", "예매우선순위", "예매성공여부", "영화페이지", "영화참고자료", "Program Note"]
     events_headers = [
         "No.", "상호", "예약계획", "방문일자", "방문요일", "예약시간", "방문시간", "Schedule", "플랫폼", "종류", "술", "콜/프", 
         "포스팅마감일자", "웹페이지", "지원내역", "예약가능일시", "방문전특이사항", "월", "화", "수", "목", "금", "토", "일", 
@@ -188,13 +244,40 @@ try:
 
     with tab3:
         st.header("🎬 관람 희망 영화 리스트")
-        df_movies_new = st.data_editor(
-            df_movies, num_rows="dynamic", use_container_width=True, key="movies_editor",
-            column_config={"예매 여부": st.column_config.CheckboxColumn("예매 여부", default=False)}
-        )
+        st.info("BIFF 영화 정보 페이지 URL을 입력하고 '정보 가져오기' 버튼을 누르면, 아래 표에 상영 정보가 자동으로 추가됩니다.")
+        
+        url = st.text_input("영화 정보 페이지 URL을 붙여넣으세요:", key="movie_url")
+        if st.button("정보 가져오기", key="fetch_movie"):
+            if url:
+                with st.spinner("영화 정보를 크롤링하는 중..."):
+                    new_movie_data = fetch_movie_info(url)
+                if new_movie_data:
+                    new_df = pd.DataFrame(new_movie_data)
+                    # 기존 데이터와 합치기 전에 세션 상태에 저장
+                    st.session_state.new_movies_to_add = new_df.to_dict('records')
+                    st.success(f"{len(new_movie_data)}개의 상영 일정을 찾았습니다! 아래 표에 임시로 추가되었습니다. 최종 저장을 위해 '영화 목록 저장하기' 버튼을 눌러주세요.")
+                else:
+                    st.error("정보를 가져오는 데 실패했습니다. URL을 확인하거나 사이트 구조가 변경되었을 수 있습니다.")
+            else:
+                st.warning("URL을 입력해주세요.")
+        
+        # 세션 상태에 추가할 영화 데이터가 있으면, 현재 표에 합쳐서 보여줌
+        if 'new_movies_to_add' in st.session_state:
+            new_movies_df = pd.DataFrame(st.session_state.new_movies_to_add)
+            display_df = pd.concat([df_movies["movies"], new_movies_df], ignore_index=True).fillna('')
+        else:
+            display_df = df_movies["movies"]
+
+        st.divider()
+        st.subheader("전체 영화 목록")
+        df_movies_new = st.data_editor(display_df, num_rows="dynamic", use_container_width=True, key="movies_editor")
+        
         if st.button("💾 영화 목록 저장하기", key="save_movies"):
-            save_data(ws_movies, df_movies_new)
-            st.success("✅ 영화 목록이 저장되었습니다!")
+            save_data(ws_movies["movies"], df_movies_new)
+            # 저장 후 세션 상태 초기화
+            if 'new_movies_to_add' in st.session_state:
+                del st.session_state.new_movies_to_add
+            st.success("✅ 영화 목록이 Google Sheets에 저장되었습니다!")
             st.experimental_rerun()
 
     with tab4:
