@@ -264,16 +264,16 @@ try:
         # 세션 상태에 추가할 영화 데이터가 있으면, 현재 표에 합쳐서 보여줌
         if 'new_movies_to_add' in st.session_state:
             new_movies_df = pd.DataFrame(st.session_state.new_movies_to_add)
-            display_df = pd.concat([df_movies["movies"], new_movies_df], ignore_index=True).fillna('')
+            display_df = pd.concat([df_movies, new_movies_df], ignore_index=True).fillna('')
         else:
-            display_df = df_movies["movies"]
+            display_df = df_movies
 
         st.divider()
         st.subheader("전체 영화 목록")
         df_movies_new = st.data_editor(display_df, num_rows="dynamic", use_container_width=True, key="movies_editor")
         
         if st.button("💾 영화 목록 저장하기", key="save_movies"):
-            save_data(ws_movies["movies"], df_movies_new)
+            save_data(ws_movies, df_movies_new)
             # 저장 후 세션 상태 초기화
             if 'new_movies_to_add' in st.session_state:
                 del st.session_state.new_movies_to_add
