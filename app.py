@@ -210,7 +210,7 @@ try:
             df_overview_new = pd.DataFrame(new_overview_data.items(), columns=['key', 'value'])
             save_data(ws_overview, df_overview_new)
             st.success("✅ 여행 개요가 저장되었습니다!")
-            st.experimental_rerun()
+            st.rerun()
 
     with tab2:
         st.header("📝 계획 버퍼 (아이디어)")
@@ -233,14 +233,14 @@ try:
         if st.button("💾 숙소 후보 저장하기", key="save_acc"):
             save_data(ws_acc, df_acc_new)
             st.success("✅ 숙소 예비 후보 목록이 저장되었습니다!")
-            st.experimental_rerun()
+            st.rerun()
         st.divider()
         st.subheader("📋 하고 싶은 것들 (엑티비티)")
         df_act_new = st.data_editor(df_act, num_rows="dynamic", use_container_width=True, key="act_editor")
         if st.button("💾 하고 싶은 것들 저장하기", key="save_act"):
             save_data(ws_act, df_act_new)
             st.success("✅ 하고 싶은 것들 목록이 저장되었습니다!")
-            st.experimental_rerun()
+            st.rerun()
 
     with tab3:
         st.header("🎬 관람 희망 영화 리스트")
@@ -278,7 +278,7 @@ try:
             if 'new_movies_to_add' in st.session_state:
                 del st.session_state.new_movies_to_add
             st.success("✅ 영화 목록이 Google Sheets에 저장되었습니다!")
-            st.experimental_rerun()
+            st.rerun()
 
     with tab4:
         st.header("📊 2024년 여행 회고 및 분석")
@@ -466,7 +466,7 @@ try:
         if st.button("💾 체험단 정보 저장하기", key="save_events"):
             save_data(ws_events, df_events_new)
             st.success("✅ 체험단 정보가 저장되었습니다!")
-            st.experimental_rerun()
+            st.rerun()
 
 except Exception as e:
     st.error(f"앱 로딩 중 오류가 발생했습니다: {e}")
