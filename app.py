@@ -55,7 +55,6 @@ def create_sheet_if_not_exists(spreadsheet, sheet_name, headers):
             worksheet.append_row(headers)
     return worksheet
 
-@st.cache_data
 def load_data(worksheet):
     df = get_as_dataframe(worksheet, usecols=None, header=0, dtype=str).fillna("")
     return df
