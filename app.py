@@ -283,7 +283,8 @@ try:
             if 'new_movies_to_add' in st.session_state:
                 del st.session_state.new_movies_to_add
             st.success("✅ 영화 목록이 Google Sheets에 저장되었습니다!")
-            st.rerun()
+            # 6. st.rerun() 대신, 현재 스크립트의 데이터 변수를 직접 업데이트합니다.
+            df_movies = df_movies_new
 
     with tab4:
         st.header("📊 2024년 여행 회고 및 분석")
